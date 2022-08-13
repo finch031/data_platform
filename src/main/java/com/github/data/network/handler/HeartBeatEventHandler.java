@@ -58,7 +58,7 @@ public class HeartBeatEventHandler implements EventHandler{
             buffer.flip();
 
             // 写socket
-            channel.write(buffer, key);
+            // channel.write(buffer, key);
 
             channel.getChannelManager().printChannelManagerStatus();
             System.out.println("- - - - - heart beat event handler - - - - - -");

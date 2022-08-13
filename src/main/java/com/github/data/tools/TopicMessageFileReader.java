@@ -14,7 +14,7 @@ import java.nio.channels.FileChannel;
 public class TopicMessageFileReader {
 
     public static void main(String[] args) throws IOException {
-        String filePath = "E:\\github\\my-projects\\data_platform\\data\\20220813\\topic01_20220813.dat";
+        String filePath = "E:\\github\\my-projects\\data_platform\\data\\20220813\\topic08_20220813.dat";
         FileInputStream fis = new FileInputStream(filePath);
 
         FileChannel fileChannel = fis.getChannel();

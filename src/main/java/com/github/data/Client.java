@@ -25,9 +25,62 @@ import java.util.concurrent.TimeUnit;
  * @description
  */
 public class Client {
+    private static class User{
+        private String user;
+        private String passWord;
+
+        public User(String user,String passWord){
+            this.user = user;
+            this.passWord = passWord;
+        }
+
+        public String getUser() {
+            return user;
+        }
+
+        public String getPassWord() {
+            return passWord;
+        }
+
+        public void setUser(String user) {
+            this.user = user;
+        }
+
+        public void setPassWord(String passWord) {
+            this.passWord = passWord;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                    "user='" + user + '\'' +
+                    ", passWord='" + passWord + '\'' +
+                    '}';
+        }
+    }
+
     private static final TinyLogger LOG = LogManager.getInstance().getTinyLogger();
 
     private final ExecutorService service = Executors.newFixedThreadPool(4);
+
+    private static final Random userChooseRandom = new Random(System.currentTimeMillis());
+
+    private static final User[] users = new User[]{
+      new User("admin","2020@data"),
+      new User("user1","2021@data"),
+      new User("user2","2022@data")
+    };
+
+    private static final String[] keys = {
+            "{\"topic\":\"topic01\", \"message_process_policy\":\"message_queue\"}",
+            "{\"topic\":\"topic02\", \"message_process_policy\":\"message_queue\"}",
+            "{\"topic\":\"topic03\", \"message_process_policy\":\"message_queue\"}",
+            "{\"topic\":\"topic04\", \"message_process_policy\":\"message_queue\"}",
+            "{\"topic\":\"topic05\", \"message_process_policy\":\"message_queue\"}",
+            "{\"topic\":\"topic06\", \"message_process_policy\":\"message_queue\"}",
+            "{\"topic\":\"topic07\", \"message_process_policy\":\"message_queue\"}",
+            "{\"topic\":\"topic08\", \"message_process_policy\":\"message_queue\"}"
+    };
 
     /**
      * App client entry.
@@ -46,7 +99,13 @@ public class Client {
      */
     public void start() throws IOException {
         LOG.info("Starting logging clients");
-        service.execute(new TcpLoggingClient("Client 1", 16666));
+        String serverHost = "node4";
+        serverHost = "192.168.0.1";
+        int sendNum = 1000;
+        service.execute(new TcpLoggingClient(serverHost, 19999,sendNum,users[0]));
+        service.execute(new TcpLoggingClient(serverHost, 19999,sendNum,users[1]));
+        service.execute(new TcpLoggingClient(serverHost, 19999,sendNum,users[2]));
+        // service.execute(new TcpLoggingClient(serverHost, 19999,sendNum));
 
         stop();
     }
@@ -67,39 +126,31 @@ public class Client {
         LOG.info("Logging clients stopped");
     }
 
-    private static void artificialDelayOf(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            LOG.error("sleep interrupted", e);
-        }
-    }
-
     /**
      * A logging client that sends requests to Reactor on TCP socket.
      */
     static class TcpLoggingClient implements Runnable {
         private final int serverPort;
-        private final String clientName;
+        private final String serverHost;
+        private final int messageNum;
+        private final User user;
 
         /**
          * Creates a new TCP logging client.
-         *
-         * @param clientName the name of the client to be sent in logging requests.
-         * @param serverPort the port on which client will send logging requests.
          */
-        public TcpLoggingClient(String clientName, int serverPort) {
-            this.clientName = clientName;
+        public TcpLoggingClient(String serverHost, int serverPort, int messageNum,User user) {
+            this.serverHost = serverHost;
             this.serverPort = serverPort;
+            this.messageNum = messageNum;
+            this.user = user;
         }
 
         @Override
         public void run() {
-            String remoteHost = "node4";
             InetAddress address;
             try{
-                address = InetAddress.getByName(remoteHost);
-                // address = InetAddress.getLocalHost();
+                // address = InetAddress.getByName(serverHost);
+                address = InetAddress.getLocalHost();
             }catch (UnknownHostException uhe){
                 throw new RuntimeException("获取远程地址失败!");
             }
@@ -126,7 +177,7 @@ public class Client {
 
                         try{
                             sendHeartRequests(outputStream);
-                            readHeartResponses(socket.getInputStream());
+                            // readHeartResponses(socket.getInputStream());
                         }catch (IOException ioe){
                             ioe.printStackTrace();
                         }
@@ -138,14 +189,13 @@ public class Client {
                 // Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(heartTask,100,500,TimeUnit.MILLISECONDS);
 
                 Random random = new Random();
-                for (int i = 0; i < 1000; i++) {
+                for (int i = 0; i < messageNum; i++) {
                     // 发送数据消息请求
                     sendMessageRequests(outputStream);
 
                     // 收取数据消息回复
                     readMessageResponses(socket.getInputStream());
 
-                    System.out.println("times=" + i);
                     try{
                         Thread.sleep(random.nextInt(100));
                     }catch (InterruptedException ie){
@@ -156,16 +206,12 @@ public class Client {
                 LOG.error("error sending requests", e);
                 throw new RuntimeException(e);
             }
-
-            try{
-                Thread.sleep(3 * 3600 * 1000);
-            }catch (InterruptedException ie){
-                // ignore
-            }
         }
 
         private void sendLoginRequests(OutputStream outputStream) throws IOException {
-            LoginRequest loginRequest = new LoginRequest("user1", Utils.md5Hex("2021@data"));
+            User user = users[userChooseRandom.nextInt(users.length)];
+            // System.out.println("user=" + user.toString());
+            LoginRequest loginRequest = new LoginRequest(user.getUser(), Utils.md5Hex(user.getPassWord()));
             int sizeOf = loginRequest.toStruct().sizeOf();
             ByteBuffer buff = ByteBuffer.allocate(sizeOf + 4 + 4);
             buff.putInt(sizeOf);
@@ -183,8 +229,6 @@ public class Client {
                 ByteBuffer buff = ByteBuffer.wrap(data, 0, read);
                 int len = buff.getInt();
                 int apiId = buff.getInt();
-                System.out.println("len=" + len + ",api id=" + apiId);
-
                 LoginResponse loginResponse = LoginResponse.parse(buff);
                 System.out.println(loginResponse.toStruct().toString());
             }
@@ -211,30 +255,24 @@ public class Client {
                 ByteBuffer buff = ByteBuffer.wrap(data, 0, read);
                 int len = buff.getInt();
                 int apiId = buff.getInt();
-                System.out.println("len=" + len + ",api id=" + apiId);
-
                 HeartBeatResponse heartBeatResponse = HeartBeatResponse.parse(buff);
                 System.out.println(heartBeatResponse.toStruct().toString());
             }
         }
 
         private void sendMessageRequests(OutputStream outputStream) throws IOException{
-            // String key = Thread.currentThread().getName() + "_" + System.currentTimeMillis();
-            String key = "{\"topic\":\"topic01\", \"message_process_policy\":\"message_queue\"}";
+           String key = keys[userChooseRandom.nextInt(keys.length)];
+           Random random = new Random(System.currentTimeMillis());
+           String value = Thread.currentThread().getId() + "_" + random.nextInt(Integer.MAX_VALUE - 1);
+           MessageRequest messageRequest = new MessageRequest(key.getBytes(),value.getBytes(),System.currentTimeMillis());
 
-            Random random = new Random(System.currentTimeMillis());
-            String value = Thread.currentThread().getName() + "_" + random.nextInt(Integer.MAX_VALUE - 1);
-            MessageRequest messageRequest = new MessageRequest(key.getBytes(),value.getBytes(),System.currentTimeMillis());
+           int sizeOf = messageRequest.toStruct().sizeOf();
 
-            int sizeOf = messageRequest.toStruct().sizeOf();
-
-            ByteBuffer buff = ByteBuffer.allocate(sizeOf + 4 + 4);
-            buff.putInt(sizeOf);
-            buff.putInt(ApiKeys.MESSAGE.getId());
-
-            messageRequest.toStruct().writeTo(buff);
-
-            outputStream.write(buff.array());
+           ByteBuffer buff = ByteBuffer.allocate(sizeOf + 4 + 4);
+           buff.putInt(sizeOf);
+           buff.putInt(ApiKeys.MESSAGE.getId());
+           messageRequest.toStruct().writeTo(buff);
+           outputStream.write(buff.array());
         }
 
         private void readMessageResponses(InputStream inputStream) throws IOException{
@@ -246,8 +284,6 @@ public class Client {
                 ByteBuffer buff = ByteBuffer.wrap(data, 0, read);
                 int len = buff.getInt();
                 int apiId = buff.getInt();
-                System.out.println("len=" + len + ",api id=" + apiId);
-
                 MessageResponse messageResponse = MessageResponse.parse(buff);
                 System.out.println(messageResponse.toStruct().toString());
             }
