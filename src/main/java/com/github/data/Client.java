@@ -114,7 +114,10 @@ public class Client {
             try /*(Socket socket = new Socket(address, serverPort))*/ {
                 OutputStream outputStream = socket.getOutputStream();
 
+                // 发送登录请求
                 sendLoginRequests(outputStream);
+
+                // 接收登录回复
                 readResponses(socket.getInputStream());
 
                 Runnable heartTask = new Runnable() {
@@ -131,14 +134,18 @@ public class Client {
                     }
                 };
 
-                Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(heartTask,100,500,TimeUnit.MILLISECONDS);
+                // 定时收发心跳消息
+                // Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(heartTask,100,500,TimeUnit.MILLISECONDS);
 
                 Random random = new Random();
-                for (int i = 0; i < 100; i++) {
+                for (int i = 0; i < 1000; i++) {
+                    // 发送数据消息请求
                     sendMessageRequests(outputStream);
-                    readResponses(socket.getInputStream());
-                    System.out.println("times=" + i);
 
+                    // 收取数据消息回复
+                    readMessageResponses(socket.getInputStream());
+
+                    System.out.println("times=" + i);
                     try{
                         Thread.sleep(random.nextInt(100));
                     }catch (InterruptedException ie){
@@ -155,7 +162,6 @@ public class Client {
             }catch (InterruptedException ie){
                 // ignore
             }
-
         }
 
         private void sendLoginRequests(OutputStream outputStream) throws IOException {
@@ -213,7 +219,9 @@ public class Client {
         }
 
         private void sendMessageRequests(OutputStream outputStream) throws IOException{
-            String key = Thread.currentThread().getName() + "_" + System.currentTimeMillis();
+            // String key = Thread.currentThread().getName() + "_" + System.currentTimeMillis();
+            String key = "{\"topic\":\"topic01\", \"message_process_policy\":\"message_queue\"}";
+
             Random random = new Random(System.currentTimeMillis());
             String value = Thread.currentThread().getName() + "_" + random.nextInt(Integer.MAX_VALUE - 1);
             MessageRequest messageRequest = new MessageRequest(key.getBytes(),value.getBytes(),System.currentTimeMillis());

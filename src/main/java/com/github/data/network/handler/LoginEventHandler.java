@@ -63,7 +63,7 @@ public class LoginEventHandler implements EventHandler{
             channel.write(buffer, key);
 
             channel.getChannelManager().printChannelManagerStatus();
-            System.out.println("- - - - - - - - - - -");
+            System.out.println("- - - - - login event handler - - - - - -");
         }
 
     }

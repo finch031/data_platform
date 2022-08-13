@@ -1,6 +1,7 @@
 package com.github.data.network.reactor;
 
 import com.github.data.common.TinyLogger;
+import com.github.data.utils.Utils;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
@@ -50,7 +51,7 @@ public class NioReactor {
      */
     private final Queue<Runnable> pendingCommands = new ConcurrentLinkedQueue<>();
 
-    private final ExecutorService reactorMain = Executors.newSingleThreadExecutor();
+    private final ExecutorService reactorMain = Executors.newSingleThreadExecutor(Utils.acceptorNamedDaemonThreadFactory());
 
     /**
      * Creates a reactor which will use provided {@code dispatcher} to dispatch events. The

@@ -61,7 +61,7 @@ public class HeartBeatEventHandler implements EventHandler{
             channel.write(buffer, key);
 
             channel.getChannelManager().printChannelManagerStatus();
-            System.out.println("- - - - - - - - - - -");
+            System.out.println("- - - - - heart beat event handler - - - - - -");
         }
     }
 }

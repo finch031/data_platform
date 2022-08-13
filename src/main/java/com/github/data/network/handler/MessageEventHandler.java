@@ -1,5 +1,13 @@
 package com.github.data.network.handler;
 
+import com.github.data.common.DataPlatformException;
+import com.github.data.common.LogManager;
+import com.github.data.common.TinyLogger;
+import com.github.data.io.MessageWriter;
+import com.github.data.io.MessageWriterManager;
+import com.github.data.json.Json;
+import com.github.data.json.JsonObject;
+import com.github.data.json.JsonValue;
 import com.github.data.network.reactor.AbstractNioChannel;
 import com.github.data.protocol.AbstractRequest;
 import com.github.data.protocol.ApiKeys;
@@ -18,6 +26,12 @@ import java.nio.channels.SelectionKey;
  * @description
  */
 public class MessageEventHandler implements EventHandler{
+    private static final TinyLogger LOG = LogManager.getInstance().getTinyLogger();
+    private final MessageWriterManager writerManager;
+
+    public MessageEventHandler(MessageWriterManager writerManager){
+        this.writerManager = writerManager;
+    }
 
     @Override
     public void handle(AbstractNioChannel channel, SelectionKey key, ApiKeys apiKeys, AbstractRequest request) {
@@ -27,7 +41,21 @@ public class MessageEventHandler implements EventHandler{
             byte[] keyBytes = messageRequest.getKey();
             byte[] valueBytes = messageRequest.getValue();
 
-            System.out.println(new String(keyBytes) + "," + new String(valueBytes));
+            JsonValue jsonValue = Json.parse(new String(keyBytes));
+            if(jsonValue.isObject()){
+                JsonObject jsonObject = jsonValue.asObject();
+
+                String processPolicy = jsonObject.getString("message_process_policy");
+                if(processPolicy.equals("message_queue")){
+                    String topic = jsonObject.getString("topic");
+                    MessageWriter messageWriter = writerManager.byTopic(topic);
+                    messageWriter.write(keyBytes,valueBytes);
+                }else{
+                    LOG.error("Unsupported message process policy: " + processPolicy);
+                }
+            }else {
+                throw new DataPlatformException("Invalid message key.");
+            }
 
             MessageResponse messageResponse = new MessageResponse(ServerResponseCode.MESSAGE_SUCCESS.getValue(),"消息接收成功");
             Struct responseStruct = messageResponse.toStruct();
@@ -49,7 +77,7 @@ public class MessageEventHandler implements EventHandler{
             channel.write(buffer, key);
 
             channel.getChannelManager().printChannelManagerStatus();
-            System.out.println("- - - - - - - - - - -");
+            System.out.println("- - - - - message event handler - - - - - -");
         }
     }
 }

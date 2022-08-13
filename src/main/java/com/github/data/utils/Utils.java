@@ -1,10 +1,19 @@
 package com.github.data.utils;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -28,8 +37,42 @@ public final class Utils {
         // no instance.
     }
 
-    public static void processID(){
+    /**
+     * write an unsigned integer in little-endian format to a byte array
+     * at a given offset.
+     *
+     * @param buffer the byte array to write to.
+     * @param offset the position in buffer to write to.
+     * @param value the value to write.
+     * */
+    public static void writeUnsignedIntLE(byte[] buffer, int offset, int value){
+        // 0000 0000 0000 0000 0000 0000 1110 1001
 
+        // 无符号整型强转为byte,结果就是只保留低字节的8位，也就是4字节的value的最低一个字节
+        buffer[offset] = (byte) value;                  // 写入第1个字节
+
+        // 无符号整型向右移动8位，结果就是原先的整型低位
+        // 第2个字节移动到低位第一个字节位置,再进行强转，
+        // 最终结果就是保留原始整型第二个字节
+
+        buffer[offset + 1] = (byte) (value >>> 8);      // 写入第2个字节
+        buffer[offset + 2] = (byte) (value >>> 16);     // 写入第3个字节
+        buffer[offset + 3]   = (byte) (value >>> 24);   // 写入第4个字节
+    }
+
+    public static byte[] writeUnsignedIntLE(int offset, int value){
+        byte[] buffer = new byte[4];
+        // 无符号整型强转为byte,结果就是只保留低字节的8位，也就是4字节的value的最低一个字节
+        buffer[offset] = (byte) value;                  // 写入第1个字节
+
+        // 无符号整型向右移动8位，结果就是原先的整型低位
+        // 第2个字节移动到低位第一个字节位置,再进行强转，
+        // 最终结果就是保留原始整型第二个字节
+
+        buffer[offset + 1] = (byte) (value >>> 8);      // 写入第2个字节
+        buffer[offset + 2] = (byte) (value >>> 16);     // 写入第3个字节
+        buffer[offset + 3]   = (byte) (value >>> 24);   // 写入第4个字节
+        return buffer;
     }
 
     /**
@@ -158,7 +201,21 @@ public final class Utils {
             @Override
             public Thread newThread(final Runnable r) {
                 Thread t = new Thread(r);
-                t.setName("reactor_processor_" + counter.addAndGet(1));
+                t.setName("reactor_io_processor_" + counter.addAndGet(1));
+                t.setDaemon(true);
+                return t;
+            }
+        };
+    }
+
+    public static ThreadFactory acceptorNamedDaemonThreadFactory(){
+        return new ThreadFactory(){
+            private final AtomicInteger counter = new AtomicInteger(0);
+
+            @Override
+            public Thread newThread(final Runnable r) {
+                Thread t = new Thread(r);
+                t.setName("reactor_acceptor_processor_" + counter.addAndGet(1));
                 t.setDaemon(true);
                 return t;
             }
@@ -197,6 +254,39 @@ public final class Utils {
     public static String md5Hex(final String data) {
         char[] encodeData = encodeHex(md5(data));
         return new String(encodeData);
+    }
+
+    public static void sleepQuietly(int timeout, TimeUnit timeUnit){
+        try{
+            timeUnit.sleep(timeout);
+        }catch (InterruptedException ie){
+            // ignore.
+        }
+    }
+
+    public static String timestampToDateTime(long ts, String pattern){
+        LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(ts), ZoneId.systemDefault());
+        // "yyyy-MM-dd HH:mm:ss.SSS"
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+        return localDateTime.format(formatter);
+    }
+
+    public static String currDateStr(){
+        LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.systemDefault());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        return localDateTime.format(formatter);
+    }
+
+    public static void mkdirIfPossible(String dirStr){
+        File dir = new File(dirStr);
+        if(dir.exists()){
+            return;
+        }
+        try{
+            Files.createDirectory(Paths.get(dirStr));
+        }catch (IOException ioe){
+            ioe.printStackTrace();
+        }
     }
 
 }

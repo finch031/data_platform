@@ -1,5 +1,7 @@
 package com.github.data;
 
+import com.github.data.io.MessageWriterManager;
+import com.github.data.io.TopicMessageFileWriter;
 import com.github.data.network.handler.HeartBeatEventHandler;
 import com.github.data.network.handler.LoginEventHandler;
 import com.github.data.network.handler.MessageEventHandler;
@@ -37,7 +39,10 @@ public class Server {
 
         apiBasedChannelHandler.addEventHandler(new HeartBeatEventHandler());
 
-        apiBasedChannelHandler.addEventHandler(new MessageEventHandler());
+        String storagePath = appConf.getString("server.service.storage.path","./");
+        int cacheFlushSize = appConf.getInteger("server.service.message.writer.cache.flush.size",100);
+        MessageWriterManager writerManager = new MessageWriterManager(cacheFlushSize,storagePath);
+        apiBasedChannelHandler.addEventHandler(new MessageEventHandler(writerManager));
 
         String serviceTcpPortStr = appConf.getString("server.service.tcp.port","");
         for (String portStr : serviceTcpPortStr.split(",")) {
