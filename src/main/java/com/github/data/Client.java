@@ -100,11 +100,12 @@ public class Client {
     public void start() throws IOException {
         LOG.info("Starting logging clients");
         String serverHost = "node4";
-        serverHost = "192.168.0.1";
+        // serverHost = "192.168.0.1";
+        int serverPort = 16666;
         int sendNum = 1000;
-        service.execute(new TcpLoggingClient(serverHost, 19999,sendNum,users[0]));
-        service.execute(new TcpLoggingClient(serverHost, 19999,sendNum,users[1]));
-        service.execute(new TcpLoggingClient(serverHost, 19999,sendNum,users[2]));
+        service.execute(new TcpLoggingClient(serverHost, serverPort,sendNum,users[0]));
+        service.execute(new TcpLoggingClient(serverHost, serverPort,sendNum,users[1]));
+        service.execute(new TcpLoggingClient(serverHost, serverPort,sendNum,users[2]));
         // service.execute(new TcpLoggingClient(serverHost, 19999,sendNum));
 
         stop();
@@ -149,8 +150,8 @@ public class Client {
         public void run() {
             InetAddress address;
             try{
-                // address = InetAddress.getByName(serverHost);
-                address = InetAddress.getLocalHost();
+                address = InetAddress.getByName(serverHost);
+                // address = InetAddress.getLocalHost();
             }catch (UnknownHostException uhe){
                 throw new RuntimeException("获取远程地址失败!");
             }
