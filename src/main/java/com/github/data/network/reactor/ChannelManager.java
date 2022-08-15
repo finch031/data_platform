@@ -50,6 +50,12 @@ public final class ChannelManager {
         return EndPoint.of(socket.getInetAddress().getHostAddress(),socket.getPort());
     }
 
+    public static EndPoint getEndpointByChannel(SelectableChannel channel){
+        SocketChannel socketChannel = (SocketChannel) channel;
+        Socket socket = socketChannel.socket();
+        return EndPoint.of(socket.getInetAddress().getHostAddress(),socket.getPort());
+    }
+
     public void printChannelManagerStatus(){
         channelToSessionMap.forEach((k,v) -> {
             System.out.println(v);

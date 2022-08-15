@@ -1,11 +1,15 @@
 package com.github.data.utils;
 
+import com.github.data.common.BufferPoolAllocator;
+
 import java.nio.ByteBuffer;
 
 /**
  * This class is copied from project of TarsJava-1.6.x
  * */
 public final class IoBuffer {
+    private static final BufferPoolAllocator bufferPoolAllocator = BufferPoolAllocator.getInstance();
+
     private ByteBuffer buf = null;
 
     private IoBuffer(ByteBuffer buf) {
@@ -21,7 +25,9 @@ public final class IoBuffer {
     }
 
     public static IoBuffer allocate(int capacity) {
-        return new IoBuffer(ByteBuffer.allocate(capacity));
+        // 从内存池中分配
+        return new IoBuffer(bufferPoolAllocator.allocate(capacity));
+        // return new IoBuffer(ByteBuffer.allocate(capacity));
     }
 
     public static IoBuffer allocateDirect(int capacity) {
@@ -90,7 +96,9 @@ public final class IoBuffer {
 
     public final IoBuffer unflip() {
         buf.position(buf.limit());
-        if (buf.limit() != buf.capacity()) buf.limit(buf.capacity());
+        if (buf.limit() != buf.capacity()) {
+            buf.limit(buf.capacity());
+        }
         return this;
     }
 
@@ -155,6 +163,9 @@ public final class IoBuffer {
 
             newBuffer.put(this.buf.array());
             newBuffer.position(this.buf.position());
+
+            // 回收到内存池中
+            bufferPoolAllocator.release(this.buf,this.buf.capacity());
 
             this.buf = newBuffer;
         }

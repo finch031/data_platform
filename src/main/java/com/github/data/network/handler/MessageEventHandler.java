@@ -1,5 +1,6 @@
 package com.github.data.network.handler;
 
+import com.github.data.common.BufferPoolAllocator;
 import com.github.data.common.DataPlatformException;
 import com.github.data.common.LogManager;
 import com.github.data.common.TinyLogger;
@@ -27,6 +28,7 @@ import java.nio.channels.SelectionKey;
  */
 public class MessageEventHandler implements EventHandler{
     private static final TinyLogger LOG = LogManager.getInstance().getTinyLogger();
+    private final BufferPoolAllocator bufferPoolAllocator = BufferPoolAllocator.getInstance();
     private final MessageWriterManager writerManager;
 
     public MessageEventHandler(MessageWriterManager writerManager){
@@ -59,7 +61,8 @@ public class MessageEventHandler implements EventHandler{
 
             MessageResponse messageResponse = new MessageResponse(ServerResponseCode.MESSAGE_SUCCESS.getValue(),"消息接收成功");
             Struct responseStruct = messageResponse.toStruct();
-            ByteBuffer buffer = ByteBuffer.allocate(responseStruct.sizeOf() + 4 + 4);
+            // ByteBuffer buffer = ByteBuffer.allocate(responseStruct.sizeOf() + 4 + 4);
+            ByteBuffer buffer = bufferPoolAllocator.allocate(responseStruct.sizeOf() + 4 + 4);
 
             // 写入4字节的消息体长度
             buffer.putInt(responseStruct.sizeOf());

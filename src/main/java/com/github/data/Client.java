@@ -100,12 +100,12 @@ public class Client {
     public void start() throws IOException {
         LOG.info("Starting logging clients");
         String serverHost = "node4";
-        // serverHost = "192.168.0.1";
+        serverHost = "192.168.0.1";
         int serverPort = 16666;
         int sendNum = 1000;
-        service.execute(new TcpLoggingClient(serverHost, serverPort,sendNum,users[0]));
-        service.execute(new TcpLoggingClient(serverHost, serverPort,sendNum,users[1]));
-        service.execute(new TcpLoggingClient(serverHost, serverPort,sendNum,users[2]));
+        service.execute(new TcpLoggingClient(serverHost, 16666,sendNum,users[0]));
+        service.execute(new TcpLoggingClient(serverHost, 17777,sendNum,users[1]));
+        service.execute(new TcpLoggingClient(serverHost, 18888,sendNum,users[2]));
         // service.execute(new TcpLoggingClient(serverHost, 19999,sendNum));
 
         stop();
@@ -146,12 +146,31 @@ public class Client {
             this.user = user;
         }
 
+        private void heartBeat(OutputStream outputStream){
+            Runnable heartTask = new Runnable() {
+                @Override
+                public void run() {
+
+                    try{
+                        sendHeartRequests(outputStream);
+                        // readHeartResponses(socket.getInputStream());
+                    }catch (IOException ioe){
+                        ioe.printStackTrace();
+                    }
+
+                }
+            };
+
+            // 定时收发心跳消息
+            Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(heartTask,100,500,TimeUnit.MILLISECONDS);
+        }
+
         @Override
         public void run() {
             InetAddress address;
             try{
-                address = InetAddress.getByName(serverHost);
-                // address = InetAddress.getLocalHost();
+                // address = InetAddress.getByName(serverHost);
+                address = InetAddress.getLocalHost();
             }catch (UnknownHostException uhe){
                 throw new RuntimeException("获取远程地址失败!");
             }
@@ -167,27 +186,12 @@ public class Client {
                 OutputStream outputStream = socket.getOutputStream();
 
                 // 发送登录请求
-                sendLoginRequests(outputStream);
+                sendLoginRequests(outputStream,user);
 
                 // 接收登录回复
-                readResponses(socket.getInputStream());
+                readLoginResponses(socket.getInputStream());
 
-                Runnable heartTask = new Runnable() {
-                    @Override
-                    public void run() {
-
-                        try{
-                            sendHeartRequests(outputStream);
-                            // readHeartResponses(socket.getInputStream());
-                        }catch (IOException ioe){
-                            ioe.printStackTrace();
-                        }
-
-                    }
-                };
-
-                // 定时收发心跳消息
-                // Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(heartTask,100,500,TimeUnit.MILLISECONDS);
+                heartBeat(outputStream);
 
                 Random random = new Random();
                 for (int i = 0; i < messageNum; i++) {
@@ -209,19 +213,21 @@ public class Client {
             }
         }
 
-        private void sendLoginRequests(OutputStream outputStream) throws IOException {
-            User user = users[userChooseRandom.nextInt(users.length)];
-            // System.out.println("user=" + user.toString());
+        private void sendLoginRequests(OutputStream outputStream,User user) throws IOException {
+            // User user = users[userChooseRandom.nextInt(users.length)];
+            System.out.println("user=" + user.toString());
             LoginRequest loginRequest = new LoginRequest(user.getUser(), Utils.md5Hex(user.getPassWord()));
+            // System.out.println(loginRequest.toStruct().toString());
             int sizeOf = loginRequest.toStruct().sizeOf();
             ByteBuffer buff = ByteBuffer.allocate(sizeOf + 4 + 4);
             buff.putInt(sizeOf);
             buff.putInt(ApiKeys.LOGIN.getId());
             loginRequest.toStruct().writeTo(buff);
+
             outputStream.write(buff.array());
         }
 
-        private void readResponses(InputStream inputStream) throws IOException {
+        private void readLoginResponses(InputStream inputStream) throws IOException {
             byte[] data = new byte[1024];
             int read = inputStream.read(data, 0, data.length);
             if (read == 0) {

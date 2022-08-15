@@ -1,11 +1,11 @@
 package com.github.data;
 
 import com.github.data.io.MessageWriterManager;
-import com.github.data.io.TopicMessageFileWriter;
 import com.github.data.network.handler.HeartBeatEventHandler;
 import com.github.data.network.handler.LoginEventHandler;
 import com.github.data.network.handler.MessageEventHandler;
 import com.github.data.network.reactor.*;
+import com.github.data.tools.ServerMonitor;
 import com.github.data.utils.AppConfiguration;
 
 import java.io.IOException;
@@ -49,6 +49,9 @@ public class Server {
             reactor.registerChannel(tcpChannel(Integer.parseInt(portStr),apiBasedChannelHandler));
         }
 
+        // 监控任务
+        ServerMonitor.start(reactor.getChannelManager());
+
         reactor.start();
     }
 
@@ -86,5 +89,4 @@ public class Server {
             ioe.printStackTrace();
         }
     }
-
 }

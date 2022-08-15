@@ -8,6 +8,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+import com.github.data.common.BufferPoolAllocator;
 import com.github.data.common.LogManager;
 import com.github.data.common.TinyLogger;
 import com.github.data.utils.IoBuffer;
@@ -22,8 +23,10 @@ public class NioServerSocketChannel extends AbstractNioChannel {
     // SocketChannel数据读取临时缓存大小
     private static final int SOCKET_CHANNEL_TMP_READ_BUFF_SIZE = 256;
 
-    // SocketChannel数据读取缓存(不可用于并发情形)
-    private static final IoBuffer SOCKET_CHANNEL_IO_BUFFER = IoBuffer.allocate(1024 * 4);
+    // SocketChannel数据读取缓存
+    private final IoBuffer SOCKET_CHANNEL_IO_BUFFER = IoBuffer.allocate(1024 * 4);
+
+    private final BufferPoolAllocator bufferPoolAllocator = BufferPoolAllocator.getInstance();
 
     private final int port;
 
@@ -69,8 +72,6 @@ public class NioServerSocketChannel extends AbstractNioChannel {
         SocketChannel socketChannel = (SocketChannel) key.channel();
 
         // SocketChannel数据读取缓存
-        // IoBuffer ioBuffer = IoBuffer.allocate(1024 * 4);
-
         SOCKET_CHANNEL_IO_BUFFER.buf().clear();
 
         // 读取SocketChannel数据
@@ -80,9 +81,12 @@ public class NioServerSocketChannel extends AbstractNioChannel {
             throw new IOException("客户端已关闭异常!");
         }
 
-        SOCKET_CHANNEL_IO_BUFFER.buf().flip();
+        ByteBuffer tmpBuff = SOCKET_CHANNEL_IO_BUFFER.buf();
+        ByteBuffer buff = bufferPoolAllocator.allocate(tmpBuff.capacity());
+        buff.put(tmpBuff);
+        buff.flip();
 
-        return SOCKET_CHANNEL_IO_BUFFER.buf();
+        return buff;
     }
 
     /**
@@ -90,7 +94,8 @@ public class NioServerSocketChannel extends AbstractNioChannel {
      * */
     private int readChannel(SocketChannel socketChannel,IoBuffer readBuffer) throws IOException{
         // 临时读缓存
-        ByteBuffer data = ByteBuffer.allocate(SOCKET_CHANNEL_TMP_READ_BUFF_SIZE);
+        ByteBuffer data = bufferPoolAllocator.allocate(SOCKET_CHANNEL_TMP_READ_BUFF_SIZE);
+
         int readBytes = 0;
         int ret;
         while((ret = socketChannel.read(data)) > 0){
@@ -100,6 +105,12 @@ public class NioServerSocketChannel extends AbstractNioChannel {
             readBuffer.put(data.array(),data.position(),data.remaining());
             data.clear();
         }
+
+        if(data.capacity() == SOCKET_CHANNEL_TMP_READ_BUFF_SIZE){
+            bufferPoolAllocator.release(data,SOCKET_CHANNEL_TMP_READ_BUFF_SIZE);
+        }
+
+        readBuffer.flip();
 
         return ret < 0 ? ret : readBytes;
     }
@@ -125,5 +136,7 @@ public class NioServerSocketChannel extends AbstractNioChannel {
     protected void doWrite(Object pendingWrite, SelectionKey key) throws IOException {
         ByteBuffer pendingBuffer = (ByteBuffer) pendingWrite;
         ((SocketChannel) key.channel()).write(pendingBuffer);
+        // 回收缓存
+        bufferPoolAllocator.release(pendingBuffer,pendingBuffer.capacity());
     }
 }

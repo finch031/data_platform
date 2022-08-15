@@ -42,6 +42,7 @@ public class LoginEventHandler implements EventHandler{
             }else{
                 responseCode = ServerResponseCode.LOGIN_FAILED;
             }
+            System.out.println(request.toStruct().toString());
 
             LoginResponse loginResponse = new LoginResponse(responseCode.getValue(), responseCode.getDescriptor());
             Struct responseStruct = loginResponse.toStruct();
