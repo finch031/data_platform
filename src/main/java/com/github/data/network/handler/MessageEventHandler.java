@@ -61,7 +61,6 @@ public class MessageEventHandler implements EventHandler{
 
             MessageResponse messageResponse = new MessageResponse(ServerResponseCode.MESSAGE_SUCCESS.getValue(),"消息接收成功");
             Struct responseStruct = messageResponse.toStruct();
-            // ByteBuffer buffer = ByteBuffer.allocate(responseStruct.sizeOf() + 4 + 4);
             ByteBuffer buffer = bufferPoolAllocator.allocate(responseStruct.sizeOf() + 4 + 4);
 
             // 写入4字节的消息体长度

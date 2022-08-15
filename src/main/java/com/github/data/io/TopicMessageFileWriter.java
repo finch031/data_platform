@@ -1,9 +1,9 @@
 package com.github.data.io;
 
+import com.github.data.common.BufferPoolAllocator;
+import com.github.data.common.LogManager;
+import com.github.data.common.TinyLogger;
 import com.github.data.json.JsonObject;
-import com.github.data.utils.Utils;
-
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -20,11 +20,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @description
  */
 public class TopicMessageFileWriter extends AbstractMessageFileWriter{
+    private static final TinyLogger LOG = LogManager.getInstance().getTinyLogger();
     private final int cacheFlushSize;
     private final List<byte[]> appendingWriteCaches = new ArrayList<>();
     private final OutputStream os;
     private static final AtomicInteger offset = new AtomicInteger(0);
-
+    private final BufferPoolAllocator bufferPoolAllocator = BufferPoolAllocator.getInstance();
     private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     private final Lock writeLock = readWriteLock.writeLock();
 
@@ -44,12 +45,13 @@ public class TopicMessageFileWriter extends AbstractMessageFileWriter{
             appendingWriteCaches.add(value);
 
             if(appendingWriteCaches.size() > cacheFlushSize){
+                ByteBuffer tmpBuff = bufferPoolAllocator.allocate(256);
                 for (byte[] bytes : appendingWriteCaches) {
                     try{
                         // 写入偏移量
                         // os.write(offset.incrementAndGet());
                         // os.write(Utils.writeUnsignedIntLE(0,offset.incrementAndGet()));
-                        ByteBuffer tmpBuff = ByteBuffer.allocate(4);
+                        tmpBuff.flip();
                         tmpBuff.putInt(offset.incrementAndGet());
                         os.write(tmpBuff.duplicate().array());
 
@@ -63,9 +65,11 @@ public class TopicMessageFileWriter extends AbstractMessageFileWriter{
                         // 写入字节数据
                         os.write(bytes);
                     }catch (IOException ioe){
-                        ioe.printStackTrace();
+                        LOG.error(ioe);
                     }
                 }
+
+                bufferPoolAllocator.release(tmpBuff,tmpBuff.capacity());
 
                 try{
                     os.flush();
