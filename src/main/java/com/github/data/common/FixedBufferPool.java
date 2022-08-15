@@ -100,7 +100,7 @@ public final class FixedBufferPool {
                 // satisfy the request, but need to allocate the buffer
                 freeUp(size); // 循环释放free中的buffer直到满足nonPooledAvailableMemory+本次释放的内存空间大于请求大小size为止。
                 this.nonPooledAvailableMemory -= size;
-                System.out.println("non pooled available memory:" + nonPooledAvailableMemory);
+                // System.out.println("non pooled available memory:" + nonPooledAvailableMemory);
 
                 // 因为内存请求大小size并不等于poolableSize，
                 // 本次申请的内存大小并不会进行缓存管理且释放后

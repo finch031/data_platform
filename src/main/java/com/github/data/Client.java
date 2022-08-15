@@ -61,14 +61,20 @@ public class Client {
 
     private static final TinyLogger LOG = LogManager.getInstance().getTinyLogger();
 
-    private final ExecutorService service = Executors.newFixedThreadPool(4);
+    private final ExecutorService service = Executors.newFixedThreadPool(9);
 
     private static final Random userChooseRandom = new Random(System.currentTimeMillis());
 
     private static final User[] users = new User[]{
       new User("admin","2020@data"),
       new User("user1","2021@data"),
-      new User("user2","2022@data")
+      new User("user2","2022@data"),
+      new User("user3","2023@data"),
+      new User("user4","2024@data"),
+      new User("user5","2025@data"),
+      new User("user6","2026@data"),
+      new User("user7","2027@data"),
+      new User("user8","2028@data")
     };
 
     private static final String[] keys = {
@@ -101,12 +107,18 @@ public class Client {
         LOG.info("Starting logging clients");
         String serverHost = "node4";
         serverHost = "192.168.0.1";
-        int serverPort = 16666;
         int sendNum = 1000;
         service.execute(new TcpLoggingClient(serverHost, 16666,sendNum,users[0]));
         service.execute(new TcpLoggingClient(serverHost, 17777,sendNum,users[1]));
         service.execute(new TcpLoggingClient(serverHost, 18888,sendNum,users[2]));
-        // service.execute(new TcpLoggingClient(serverHost, 19999,sendNum));
+
+        service.execute(new TcpLoggingClient(serverHost, 16666,sendNum,users[3]));
+        service.execute(new TcpLoggingClient(serverHost, 17777,sendNum,users[4]));
+        service.execute(new TcpLoggingClient(serverHost, 18888,sendNum,users[5]));
+
+        service.execute(new TcpLoggingClient(serverHost, 16666,sendNum,users[6]));
+        service.execute(new TcpLoggingClient(serverHost, 17777,sendNum,users[7]));
+        service.execute(new TcpLoggingClient(serverHost, 18888,sendNum,users[8]));
 
         stop();
     }
@@ -206,6 +218,7 @@ public class Client {
                     }catch (InterruptedException ie){
                         // ignore
                     }
+                    System.out.println("user:" + user + " 已发送:" + i);
                 }
             } catch (IOException e) {
                 LOG.error("error sending requests", e);
@@ -292,7 +305,7 @@ public class Client {
                 int len = buff.getInt();
                 int apiId = buff.getInt();
                 MessageResponse messageResponse = MessageResponse.parse(buff);
-                System.out.println(messageResponse.toStruct().toString());
+                // System.out.println(messageResponse.toStruct().toString());
             }
         }
     }

@@ -12,15 +12,20 @@ public class UtilsTest {
 
     // @Test
     public void test01(){
-        String pass = "2020@data";
+        String pass = "2026@data";
 
         System.out.println(Utils.md5Hex(pass));
 
-        pass = "2021@data";
+        pass = "2027@data";
         System.out.println(Utils.md5Hex(pass));
 
-        pass = "2022@data";
+        pass = "2028@data";
         System.out.println(Utils.md5Hex(pass));
+    }
+
+    public static void main(String[] args){
+        UtilsTest test = new UtilsTest();
+        test.test01();
     }
 
 }

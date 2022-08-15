@@ -48,20 +48,13 @@ public class TopicMessageFileWriter extends AbstractMessageFileWriter{
                 ByteBuffer tmpBuff = bufferPoolAllocator.allocate(256);
                 for (byte[] bytes : appendingWriteCaches) {
                     try{
+                        tmpBuff.clear();
                         // 写入偏移量
-                        // os.write(offset.incrementAndGet());
-                        // os.write(Utils.writeUnsignedIntLE(0,offset.incrementAndGet()));
-                        tmpBuff.flip();
                         tmpBuff.putInt(offset.incrementAndGet());
-                        os.write(tmpBuff.duplicate().array());
-
                         // 写入字节数据数据长度
-                        // os.write(bytes.length);
-                        // os.write(Utils.writeUnsignedIntLE(0,bytes.length));
-                        tmpBuff.flip();
                         tmpBuff.putInt(bytes.length);
-                        os.write(tmpBuff.duplicate().array());
 
+                        os.write(tmpBuff.array());
                         // 写入字节数据
                         os.write(bytes);
                     }catch (IOException ioe){
