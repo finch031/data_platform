@@ -107,7 +107,7 @@ public class Client {
         LOG.info("Starting logging clients");
         String serverHost = "node4";
         serverHost = "192.168.0.1";
-        int sendNum = 1000;
+        int sendNum = 10000;
         service.execute(new TcpLoggingClient(serverHost, 16666,sendNum,users[0]));
         service.execute(new TcpLoggingClient(serverHost, 17777,sendNum,users[1]));
         service.execute(new TcpLoggingClient(serverHost, 18888,sendNum,users[2]));
