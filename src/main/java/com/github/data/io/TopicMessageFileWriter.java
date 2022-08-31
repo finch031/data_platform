@@ -10,8 +10,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author yusheng
@@ -26,8 +25,7 @@ public class TopicMessageFileWriter extends AbstractMessageFileWriter{
     private final OutputStream os;
     private static final AtomicInteger offset = new AtomicInteger(0);
     private final BufferPoolAllocator bufferPoolAllocator = BufferPoolAllocator.getInstance();
-    private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
-    private final Lock writeLock = readWriteLock.writeLock();
+    private final ReentrantLock lock = new ReentrantLock();
 
     public TopicMessageFileWriter(int cacheFlushSize,OutputStream os){
         this.cacheFlushSize = cacheFlushSize;
@@ -40,7 +38,7 @@ public class TopicMessageFileWriter extends AbstractMessageFileWriter{
     }
 
     private void append(byte[] value){
-        writeLock.lock();
+        lock.lock();
         try{
             appendingWriteCaches.add(value);
 
@@ -73,7 +71,7 @@ public class TopicMessageFileWriter extends AbstractMessageFileWriter{
                 appendingWriteCaches.clear();
             }
         }finally {
-            writeLock.unlock();
+            lock.unlock();
         }
     }
 
